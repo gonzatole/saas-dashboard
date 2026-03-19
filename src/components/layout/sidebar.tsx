@@ -1,0 +1,123 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard, BarChart3, Package, Users, Settings, CreditCard,
+  Zap, ChevronRight,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+  badge?: string;
+}
+
+const navSections = [
+  {
+    title: 'Principal',
+    items: [
+      { label: 'Overview', href: '/dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
+      { label: 'Analytics', href: '/dashboard/analytics', icon: <BarChart3 className="h-4 w-4" />, badge: 'New' },
+    ],
+  },
+  {
+    title: 'Gestión',
+    items: [
+      { label: 'Productos', href: '/dashboard/products', icon: <Package className="h-4 w-4" /> },
+      { label: 'Clientes', href: '/dashboard/customers', icon: <Users className="h-4 w-4" /> },
+    ],
+  },
+  {
+    title: 'Cuenta',
+    items: [
+      { label: 'Configuración', href: '/dashboard/settings', icon: <Settings className="h-4 w-4" /> },
+      { label: 'Facturación', href: '/dashboard/billing', icon: <CreditCard className="h-4 w-4" /> },
+    ],
+  },
+];
+
+function NavLink({ item }: { item: NavItem }) {
+  const pathname = usePathname();
+  const isActive = pathname === item.href;
+
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all',
+        isActive
+          ? 'bg-primary text-primary-foreground'
+          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+      )}
+    >
+      {item.icon}
+      <span className="flex-1">{item.label}</span>
+      {item.badge && (
+        <Badge className="h-5 px-1.5 text-xs bg-blue-500 text-white border-0">
+          {item.badge}
+        </Badge>
+      )}
+    </Link>
+  );
+}
+
+export function Sidebar() {
+  return (
+    <aside className="flex h-screen w-64 flex-col border-r border-border bg-card">
+      {/* Logo */}
+      <div className="flex h-16 items-center border-b border-border px-6">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+            <Zap className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <span className="text-lg font-bold">SaaSPro</span>
+        </div>
+      </div>
+
+      {/* Navegación */}
+      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+        {navSections.map((section) => (
+          <div key={section.title}>
+            <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {section.title}
+            </p>
+            <div className="space-y-1">
+              {section.items.map((item) => (
+                <NavLink key={item.href} item={item} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </nav>
+
+      {/* Upgrade banner */}
+      <div className="p-3 border-t border-border">
+        <div className="rounded-lg bg-gradient-to-br from-primary/20 to-blue-500/20 p-3 border border-primary/20">
+          <p className="text-xs font-semibold mb-1">¡Upgrade a Enterprise!</p>
+          <p className="text-xs text-muted-foreground mb-2">Desbloquea analytics avanzados y soporte prioritario.</p>
+          <Link
+            href="/dashboard/billing"
+            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            Ver planes <ChevronRight className="h-3 w-3" />
+          </Link>
+        </div>
+
+        {/* User info */}
+        <div className="flex items-center gap-3 mt-3 px-1">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shrink-0">
+            <span className="text-xs font-bold text-white">G</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">Gonzalo</p>
+            <p className="text-xs text-muted-foreground truncate">gonzalo@ejemplo.com</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
