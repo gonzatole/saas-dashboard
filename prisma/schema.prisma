@@ -1,0 +1,391 @@
+// RiskGuard AI — Prisma Schema
+// Multi-tenant SaaS for workplace risk prevention (Ley 16.744 Chile)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Plan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum UserRole {
+  ADMIN
+  SUPERVISOR
+  VIEWER
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum InspectionStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  REVIEWED
+}
+
+enum IncidentSeverity {
+  NEAR_MISS
+  MINOR
+  MODERATE
+  SERIOUS
+  FATAL
+}
+
+enum IncidentStatus {
+  REPORTED
+  INVESTIGATING
+  ACTION_PENDING
+  CLOSED
+}
+
+enum DocumentType {
+  PROCEDURE
+  REGULATION
+  CERTIFICATE
+  TRAINING
+  INSPECTION_REPORT
+  INCIDENT_REPORT
+  OTHER
+}
+
+enum ActionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPANIES (Tenant)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Company {
+  id                   String    @id @default(cuid())
+  rut                  String    @unique
+  name                 String
+  tradeName            String?
+  industry             String?
+  employeeCount        Int       @default(0)
+  plan                 Plan      @default(FREE)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  subscriptionStatus   String?
+  subscriptionEndsAt   DateTime?
+  logoUrl              String?
+  phone                String?
+  address              String?
+  city                 String?
+  region               String?
+  country              String    @default("CL")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  users             User[]
+  workers           Worker[]
+  areas             Area[]
+  riskCategories    RiskCategory[]
+  inspections       Inspection[]
+  incidents         Incident[]
+  documents         Document[]
+  aiConversations   AiConversation[]
+  monthlyReports    MonthlyReport[]
+  correctiveActions CorrectiveAction[]
+
+  @@map("companies")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id          String    @id @default(cuid())
+  supabaseId  String    @unique
+  email       String    @unique
+  name        String
+  role        UserRole  @default(VIEWER)
+  avatarUrl   String?
+  phone       String?
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  inspections       Inspection[]
+  incidents         Incident[]
+  aiConversations   AiConversation[]
+  correctiveActions CorrectiveAction[]
+
+  @@index([companyId])
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WORKERS (Trabajadores)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Worker {
+  id           String    @id @default(cuid())
+  rut          String
+  name         String
+  lastName     String
+  email        String?
+  phone        String?
+  position     String
+  department   String?
+  areaId       String?
+  area         Area?     @relation(fields: [areaId], references: [id])
+  contractType String?
+  startDate    DateTime?
+  isActive     Boolean   @default(true)
+  companyId    String
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  incidents       Incident[]
+  inspectionItems InspectionItem[]
+
+  @@unique([rut, companyId])
+  @@index([companyId])
+  @@map("workers")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AREAS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Area {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  riskLevel   RiskLevel @default(MEDIUM)
+  location    String?
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workers     Worker[]
+  inspections Inspection[]
+  incidents   Incident[]
+
+  @@index([companyId])
+  @@map("areas")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RISK CATEGORIES
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RiskCategory {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#6366f1")
+  isSystem    Boolean  @default(false)
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  inspectionItems InspectionItem[]
+  incidents       Incident[]
+
+  @@index([companyId])
+  @@map("risk_categories")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INSPECTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Inspection {
+  id            String           @id @default(cuid())
+  title         String
+  description   String?
+  status        InspectionStatus @default(DRAFT)
+  scheduledDate DateTime?
+  completedDate DateTime?
+  aiScore       Float?
+  aiSummary     String?
+  areaId        String?
+  area          Area?            @relation(fields: [areaId], references: [id])
+  inspectorId   String
+  inspector     User             @relation(fields: [inspectorId], references: [id])
+  companyId     String
+  company       Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  items             InspectionItem[]
+  correctiveActions CorrectiveAction[]
+
+  @@index([companyId])
+  @@index([status])
+  @@map("inspections")
+}
+
+model InspectionItem {
+  id           String        @id @default(cuid())
+  inspectionId String
+  inspection   Inspection    @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  question     String
+  answer       String?
+  observation  String?
+  photoUrl     String?
+  riskLevel    RiskLevel?
+  categoryId   String?
+  category     RiskCategory? @relation(fields: [categoryId], references: [id])
+  workerId     String?
+  worker       Worker?       @relation(fields: [workerId], references: [id])
+  order        Int           @default(0)
+  createdAt    DateTime      @default(now())
+
+  @@index([inspectionId])
+  @@map("inspection_items")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INCIDENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Incident {
+  id                String           @id @default(cuid())
+  title             String
+  description       String
+  severity          IncidentSeverity
+  status            IncidentStatus   @default(REPORTED)
+  occurredAt        DateTime
+  reportedAt        DateTime         @default(now())
+  location          String?
+  injuredCount      Int              @default(0)
+  lostDays          Int              @default(0)
+  aiAnalysis        String?
+  aiRecommendations String?
+  areaId            String?
+  area              Area?            @relation(fields: [areaId], references: [id])
+  reportedById      String
+  reportedBy        User             @relation(fields: [reportedById], references: [id])
+  categoryId        String?
+  category          RiskCategory?    @relation(fields: [categoryId], references: [id])
+  companyId         String
+  company           Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  workers           Worker[]
+  correctiveActions CorrectiveAction[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([severity])
+  @@map("incidents")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CORRECTIVE ACTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model CorrectiveAction {
+  id           String       @id @default(cuid())
+  title        String
+  description  String
+  status       ActionStatus @default(PENDING)
+  dueDate      DateTime
+  completedAt  DateTime?
+  inspectionId String?
+  inspection   Inspection?  @relation(fields: [inspectionId], references: [id])
+  incidentId   String?
+  incident     Incident?    @relation(fields: [incidentId], references: [id])
+  assignedToId String
+  assignedTo   User         @relation(fields: [assignedToId], references: [id])
+  companyId    String
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+  @@map("corrective_actions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOCUMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Document {
+  id          String       @id @default(cuid())
+  name        String
+  type        DocumentType
+  fileUrl     String
+  fileSize    Int?
+  mimeType    String?
+  description String?
+  expiresAt   DateTime?
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([companyId])
+  @@index([type])
+  @@map("documents")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI CONVERSATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AiConversation {
+  id        String   @id @default(cuid())
+  title     String?
+  messages  Json
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId, userId])
+  @@map("ai_conversations")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MONTHLY REPORTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model MonthlyReport {
+  id              String   @id @default(cuid())
+  month           Int
+  year            Int
+  summary         String
+  keyFindings     Json
+  recommendations Json
+  stats           Json
+  pdfUrl          String?
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+
+  @@unique([companyId, month, year])
+  @@index([companyId])
+  @@map("monthly_reports")
+}
