@@ -1,24 +1,56 @@
-'use client';
-
-import {
-  BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} from 'recharts';
 import { DashboardHeader } from '@/components/layout/dashboard-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { riskTrendData } from '@/lib/mock-data';
+import { getAnalyticsData } from '@/actions/dashboard';
+import { AnalyticsCharts } from '@/components/dashboard/analytics-charts';
+import { INCIDENT_SEVERITY_LABELS } from '@/lib/constants';
 
-const metricStats = [
-  { label: 'Inspecciones totales', value: '0', description: 'Acumuladas' },
-  { label: 'Incidentes totales', value: '0', description: 'Acumulados' },
-  { label: 'Tasa de cumplimiento', value: '—', description: 'Score promedio IA' },
-  { label: 'Acciones cerradas', value: '0', description: 'Del total abiertas' },
-];
+const SEVERITY_COLORS: Record<string, string> = {
+  NEAR_MISS: 'bg-zinc-200 text-zinc-700',
+  MINOR: 'bg-yellow-100 text-yellow-800',
+  MODERATE: 'bg-orange-100 text-orange-800',
+  SERIOUS: 'bg-red-100 text-red-800',
+  FATAL: 'bg-red-200 text-red-900',
+};
 
-export default function AnalyticsPage() {
+export default async function AnalyticsPage() {
+  const data = await getAnalyticsData();
+
+  const complianceRate =
+    data.totalActions > 0
+      ? Math.round((data.closedActions / data.totalActions) * 100)
+      : null;
+
+  const metricStats = [
+    {
+      label: 'Inspecciones totales',
+      value: data.totalInspections.toString(),
+      description: 'Acumuladas',
+    },
+    {
+      label: 'Incidentes totales',
+      value: data.totalIncidents.toString(),
+      description: 'Acumulados',
+    },
+    {
+      label: 'Acciones cerradas',
+      value: data.totalActions > 0
+        ? `${data.closedActions}/${data.totalActions}`
+        : '—',
+      description: complianceRate !== null ? `${complianceRate}% completadas` : 'Sin acciones',
+    },
+    {
+      label: 'Pendientes',
+      value: (data.totalActions - data.closedActions).toString(),
+      description: 'Acciones correctivas abiertas',
+    },
+  ];
+
   return (
     <div className="flex flex-col min-h-screen">
-      <DashboardHeader title="Analytics" subtitle="Análisis de riesgos laborales y cumplimiento normativo" />
+      <DashboardHeader
+        title="Analytics"
+        subtitle="Análisis de riesgos laborales y cumplimiento normativo"
+      />
 
       <main className="flex-1 p-6 space-y-6">
         {/* KPIs */}
@@ -34,46 +66,32 @@ export default function AnalyticsPage() {
           ))}
         </div>
 
-        {/* Tendencia de riesgos */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Tendencia de Actividad — Últimos 6 meses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={riskTrendData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="inspecciones" name="Inspecciones" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="incidentes" name="Incidentes" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="acciones" name="Acciones correctivas" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Charts — client component */}
+        <AnalyticsCharts trend={data.trend} />
 
-        {/* Línea de incidentes */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Evolución de Incidentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={riskTrendData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="incidentes" name="Incidentes" stroke="#ef4444" strokeWidth={2} dot />
-                <Line type="monotone" dataKey="inspecciones" name="Inspecciones" stroke="#3b82f6" strokeWidth={2} dot />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Severity breakdown */}
+        {data.severityBreakdown.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Incidentes por Gravedad</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                {data.severityBreakdown
+                  .sort((a, b) => b._count.severity - a._count.severity)
+                  .map((s) => (
+                    <div
+                      key={s.severity}
+                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${SEVERITY_COLORS[s.severity] ?? 'bg-muted text-foreground'}`}
+                    >
+                      <span>{INCIDENT_SEVERITY_LABELS[s.severity] ?? s.severity}</span>
+                      <span className="font-bold">{s._count.severity}</span>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );
