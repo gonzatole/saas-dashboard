@@ -1,13 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, BarChart3, Package, Users, Settings, CreditCard,
-  Zap, ChevronRight,
+  LayoutDashboard, BarChart3, Users, Settings, CreditCard,
+  ShieldCheck, ChevronRight, ClipboardList, AlertTriangle,
+  FileText, Bot, HardHat, LogOut, MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { createClient } from '@/lib/supabase/client';
 
 interface NavItem {
   label: string;
@@ -20,29 +22,40 @@ const navSections = [
   {
     title: 'Principal',
     items: [
-      { label: 'Overview', href: '/dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
-      { label: 'Analytics', href: '/dashboard/analytics', icon: <BarChart3 className="h-4 w-4" />, badge: 'New' },
+      { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
+      { label: 'Analytics', href: '/dashboard/analytics', icon: <BarChart3 className="h-4 w-4" /> },
     ],
   },
   {
-    title: 'Gestión',
+    title: 'Gestión de Riesgos',
     items: [
-      { label: 'Productos', href: '/dashboard/products', icon: <Package className="h-4 w-4" /> },
-      { label: 'Clientes', href: '/dashboard/customers', icon: <Users className="h-4 w-4" /> },
+      { label: 'Trabajadores', href: '/dashboard/trabajadores', icon: <HardHat className="h-4 w-4" /> },
+      { label: 'Áreas', href: '/dashboard/areas', icon: <MapPin className="h-4 w-4" /> },
+      { label: 'Inspecciones', href: '/dashboard/inspecciones', icon: <ClipboardList className="h-4 w-4" /> },
+      { label: 'Incidentes', href: '/dashboard/incidentes', icon: <AlertTriangle className="h-4 w-4" /> },
+      { label: 'Documentos', href: '/dashboard/documentos', icon: <FileText className="h-4 w-4" /> },
+    ],
+  },
+  {
+    title: 'Inteligencia Artificial',
+    items: [
+      { label: 'Asistente IA', href: '/dashboard/ai', icon: <Bot className="h-4 w-4" />, badge: 'Pro' },
+      { label: 'Reportes IA', href: '/dashboard/ai/reportes', icon: <FileText className="h-4 w-4" />, badge: 'Pro' },
     ],
   },
   {
     title: 'Cuenta',
     items: [
+      { label: 'Usuarios', href: '/dashboard/usuarios', icon: <Users className="h-4 w-4" /> },
       { label: 'Configuración', href: '/dashboard/settings', icon: <Settings className="h-4 w-4" /> },
-      { label: 'Facturación', href: '/dashboard/billing', icon: <CreditCard className="h-4 w-4" /> },
+      { label: 'Facturación', href: '/dashboard/facturacion', icon: <CreditCard className="h-4 w-4" /> },
     ],
   },
 ];
 
 function NavLink({ item }: { item: NavItem }) {
   const pathname = usePathname();
-  const isActive = pathname === item.href;
+  const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
   return (
     <Link
@@ -66,15 +79,27 @@ function NavLink({ item }: { item: NavItem }) {
 }
 
 export function Sidebar() {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
+
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-border bg-card">
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-border px-6">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <Zap className="h-5 w-5 text-primary-foreground" />
+            <ShieldCheck className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold">SaaSPro</span>
+          <div>
+            <span className="text-base font-bold leading-tight block">RiskGuard</span>
+            <span className="text-[10px] font-medium text-primary leading-tight block -mt-0.5">AI</span>
+          </div>
         </div>
       </div>
 
@@ -97,25 +122,32 @@ export function Sidebar() {
       {/* Upgrade banner */}
       <div className="p-3 border-t border-border">
         <div className="rounded-lg bg-gradient-to-br from-primary/20 to-blue-500/20 p-3 border border-primary/20">
-          <p className="text-xs font-semibold mb-1">¡Upgrade a Enterprise!</p>
-          <p className="text-xs text-muted-foreground mb-2">Desbloquea analytics avanzados y soporte prioritario.</p>
+          <p className="text-xs font-semibold mb-1">Upgrade a Pro</p>
+          <p className="text-xs text-muted-foreground mb-2">IA ilimitada, reportes PDF y trabajadores sin límite.</p>
           <Link
-            href="/dashboard/billing"
+            href="/dashboard/facturacion"
             className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
           >
             Ver planes <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
 
-        {/* User info */}
+        {/* User info + logout */}
         <div className="flex items-center gap-3 mt-3 px-1">
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shrink-0">
-            <span className="text-xs font-bold text-white">G</span>
+            <span className="text-xs font-bold text-white">R</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">Gonzalo</p>
-            <p className="text-xs text-muted-foreground truncate">gonzalo@ejemplo.com</p>
+            <p className="text-sm font-medium truncate">Mi Empresa</p>
+            <p className="text-xs text-muted-foreground truncate">Plan Gratuito</p>
           </div>
+          <button
+            onClick={handleLogout}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+            title="Cerrar sesión"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </aside>

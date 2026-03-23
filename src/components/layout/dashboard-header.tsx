@@ -9,9 +9,10 @@ interface DashboardHeaderProps {
   title: string;
   subtitle?: string;
   onMenuClick?: () => void;
+  action?: React.ReactNode;
 }
 
-export function DashboardHeader({ title, subtitle, onMenuClick }: DashboardHeaderProps) {
+export function DashboardHeader({ title, subtitle, onMenuClick, action }: DashboardHeaderProps) {
   return (
     <header className="h-16 border-b border-border bg-card flex items-center px-6 gap-4">
       {/* Mobile menu toggle */}
@@ -24,6 +25,9 @@ export function DashboardHeader({ title, subtitle, onMenuClick }: DashboardHeade
         <h1 className="text-lg font-semibold">{title}</h1>
         {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       </div>
+
+      {/* Optional action (e.g. primary button) */}
+      {action && <div className="hidden sm:block">{action}</div>}
 
       {/* Search */}
       <div className="hidden sm:flex relative w-64">
