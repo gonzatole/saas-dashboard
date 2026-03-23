@@ -13,6 +13,9 @@ import {
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
+import { PdfDownloadButton } from "@/components/shared/pdf-download-button";
+import { requireAuth } from "@/lib/dal";
+import { PLANS } from "@/lib/stripe";
 
 const STATUS_STYLES: Record<string, string> = {
   DRAFT: "border-zinc-200 bg-zinc-50 text-zinc-600",
@@ -40,8 +43,9 @@ interface PageProps {
 
 export default async function InspectionDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const inspection = await getInspectionById(id);
+  const [inspection, user] = await Promise.all([getInspectionById(id), requireAuth()]);
   if (!inspection) notFound();
+  const canExportPdf = PLANS[(user.company?.plan ?? 'FREE') as keyof typeof PLANS]?.limits?.exportPdf ?? false;
 
   const okCount = inspection.items.filter((i) => i.answer === "OK").length;
   const noOkCount = inspection.items.filter((i) => i.answer === "NO_OK").length;
@@ -59,13 +63,21 @@ export default async function InspectionDetailPage({ params }: PageProps) {
       />
 
       <main className="flex-1 p-6 space-y-6">
-        <Link
-          href="/dashboard/inspecciones"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Volver a inspecciones
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href="/dashboard/inspecciones"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver a inspecciones
+          </Link>
+          {canExportPdf && (
+            <PdfDownloadButton
+              url={`/api/pdf/inspeccion/${id}`}
+              filename={`inspeccion-${id}.pdf`}
+            />
+          )}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Sidebar info */}
