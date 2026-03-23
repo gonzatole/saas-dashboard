@@ -7,8 +7,8 @@ const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'SaaSPro — Dashboard Administrativo',
-  description: 'Template SaaS completo con analytics, gestión de productos y clientes.',
+  title: 'RiskGuard AI — Prevención de Riesgos Laborales',
+  description: 'Plataforma inteligente de gestión de prevención de riesgos laborales para PYMEs chilenas. Cumple con la Ley 16.744.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
