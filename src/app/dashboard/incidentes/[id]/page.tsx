@@ -11,6 +11,7 @@ import {
   INCIDENT_SEVERITY_LABELS, ACTION_STATUS_LABELS,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 
 const SEVERITY_STYLES: Record<string, string> = {
   NEAR_MISS: "border-zinc-200 bg-zinc-50 text-zinc-600",
@@ -161,6 +162,19 @@ export default async function IncidentDetailPage({ params }: PageProps) {
                 </div>
               </div>
             )}
+
+            {/* AI Analysis */}
+            <AiAnalysisPanel
+              type="incident"
+              data={{
+                title: incident.title,
+                description: incident.description,
+                severity: incident.severity,
+                location: incident.location,
+                injuredCount: incident.injuredCount,
+                lostDays: incident.lostDays,
+              }}
+            />
 
             {/* Corrective Actions */}
             <div className="rounded-xl border border-border bg-card p-5">

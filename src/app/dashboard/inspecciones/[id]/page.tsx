@@ -12,6 +12,7 @@ import {
   ACTION_STATUS_LABELS,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 
 const STATUS_STYLES: Record<string, string> = {
   DRAFT: "border-zinc-200 bg-zinc-50 text-zinc-600",
@@ -180,6 +181,21 @@ export default async function InspectionDetailPage({ params }: PageProps) {
                 </div>
               )}
             </div>
+
+            {/* AI Analysis */}
+            <AiAnalysisPanel
+              type="inspection"
+              data={{
+                title: inspection.title,
+                score,
+                okCount,
+                noOkCount,
+                naCount,
+                failedItems: inspection.items
+                  .filter((i) => i.answer === "NO_OK")
+                  .map((i) => i.question),
+              }}
+            />
 
             {/* Corrective Actions */}
             {inspection.correctiveActions.length > 0 && (
