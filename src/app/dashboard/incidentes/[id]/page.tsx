@@ -12,6 +12,9 @@ import {
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
+import { PdfDownloadButton } from "@/components/shared/pdf-download-button";
+import { requireAuth } from "@/lib/dal";
+import { PLANS } from "@/lib/stripe";
 
 const SEVERITY_STYLES: Record<string, string> = {
   NEAR_MISS: "border-zinc-200 bg-zinc-50 text-zinc-600",
@@ -48,8 +51,9 @@ interface PageProps {
 
 export default async function IncidentDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const incident = await getIncidentById(id);
+  const [incident, user] = await Promise.all([getIncidentById(id), requireAuth()]);
   if (!incident) notFound();
+  const canExportPdf = PLANS[(user.company?.plan ?? 'FREE') as keyof typeof PLANS]?.limits?.exportPdf ?? false;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -59,13 +63,21 @@ export default async function IncidentDetailPage({ params }: PageProps) {
       />
 
       <main className="flex-1 p-6 space-y-6">
-        <Link
-          href="/dashboard/incidentes"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Volver a incidentes
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href="/dashboard/incidentes"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver a incidentes
+          </Link>
+          {canExportPdf && (
+            <PdfDownloadButton
+              url={`/api/pdf/incidente/${id}`}
+              filename={`incidente-${id}.pdf`}
+            />
+          )}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Info sidebar */}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { sendWelcomeEmail } from "@/lib/email";
 
 type PrismaTx = Parameters<Parameters<PrismaClient["$transaction"]>[0]>[0];
 
@@ -68,6 +69,11 @@ export async function POST(request: Request) {
 
       return { company, user: dbUser };
     });
+
+    // Send welcome email (fire-and-forget — don't block the response)
+    sendWelcomeEmail({ to: email, name, companyName }).catch((err) =>
+      console.warn('[Email] welcome failed:', err)
+    );
 
     return NextResponse.json({ ok: true, userId: result.user.id, companyId: result.company.id });
   } catch (error) {
